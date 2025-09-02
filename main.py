@@ -45,17 +45,9 @@ async def lifespan(app: FastAPI):
         await notification_scheduler.start()
         logger.info("Scheduler started")
         
-        # Set webhook if URL is provided
-        if settings.webhook_url:
-            await weather_bot.bot.set_webhook(
-                url=settings.webhook_url,
-                drop_pending_updates=True
-            )
-            logger.info(f"Webhook set to: {settings.webhook_url}")
-        else:
-            # Start polling if no webhook URL
-            logger.info("Starting bot polling...")
-            asyncio.create_task(dp.start_polling(weather_bot.bot))
+        # Don't set webhook during startup on Render - it causes timeout
+        # Webhook will be set manually after deployment
+        logger.info("Bot initialization complete - webhook setup skipped during startup")
         
         logger.info("Weather Bot application started successfully!")
         
@@ -251,6 +243,48 @@ async def get_scheduler_status():
     except Exception as e:
         logger.error(f"Scheduler status error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/setup-webhook")
+async def setup_webhook_endpoint():
+    """Setup webhook after deployment (admin endpoint)"""
+    try:
+        webhook_url = "https://weather-bot-y5fd.onrender.com/webhook"
+        
+        # Delete existing webhook first
+        await weather_bot.bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Deleted existing webhook")
+        
+        # Set new webhook
+        result = await weather_bot.bot.set_webhook(
+            url=webhook_url,
+            drop_pending_updates=True
+        )
+        
+        if result:
+            logger.info(f"Webhook set successfully to: {webhook_url}")
+            
+            # Get webhook info to verify
+            webhook_info = await weather_bot.bot.get_webhook_info()
+            
+            return {
+                "status": "success",
+                "message": "Webhook set successfully",
+                "webhook_url": webhook_info.url,
+                "pending_updates": webhook_info.pending_update_count
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Failed to set webhook"
+            }
+            
+    except Exception as e:
+        logger.error(f"Setup webhook error: {e}")
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 
 # Error handlers
