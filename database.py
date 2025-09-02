@@ -1,10 +1,10 @@
-from sqlalchemy import create_engine, Column, BigInteger, String, Boolean, Time, DECIMAL, DateTime, Integer, JSON, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import BigInteger, String, Boolean, Time, DECIMAL, DateTime, Integer, JSON, Text, select
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 from config import settings
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from datetime import datetime, time as time_type
 
 # Convert database URL for async usage
 if settings.database_url.startswith("postgresql://"):
@@ -18,44 +18,45 @@ else:
 engine = create_async_engine(async_database_url, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 class User(Base):
     __tablename__ = "users"
     
-    user_id = Column(BigInteger, primary_key=True, index=True)
-    language = Column(String(2), default="en")
-    city = Column(String(100))
-    city_lat = Column(DECIMAL(10, 8))
-    city_lon = Column(DECIMAL(11, 8))
-    notification_time = Column(Time, default=func.time("09:00:00"))
-    timezone = Column(String(50), default="UTC")
-    notifications_enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, index=True)
+    language: Mapped[str] = mapped_column(String(2), default="en")
+    city: Mapped[str] = mapped_column(String(100), nullable=True)
+    city_lat: Mapped[float] = mapped_column(DECIMAL(10, 8), nullable=True)
+    city_lon: Mapped[float] = mapped_column(DECIMAL(11, 8), nullable=True)
+    notification_time: Mapped[time_type] = mapped_column(Time, default=time_type(9, 0))
+    timezone: Mapped[str] = mapped_column(String(50), default="UTC")
+    notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
 
 class BotLog(Base):
     __tablename__ = "bot_logs"
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(BigInteger, index=True)
-    action = Column(String(50))
-    data = Column(JSON)
-    created_at = Column(DateTime, default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    action: Mapped[str] = mapped_column(String(50))
+    data: Mapped[dict] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
 class CityCache(Base):
     __tablename__ = "city_cache"
     
-    id = Column(Integer, primary_key=True, index=True)
-    city_name = Column(String(100), index=True)
-    latitude = Column(DECIMAL(10, 8))
-    longitude = Column(DECIMAL(11, 8))
-    country = Column(String(100))
-    display_name = Column(Text)
-    created_at = Column(DateTime, default=func.now())
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    city_name: Mapped[str] = mapped_column(String(100), index=True)
+    latitude: Mapped[float] = mapped_column(DECIMAL(10, 8))
+    longitude: Mapped[float] = mapped_column(DECIMAL(11, 8))
+    country: Mapped[str] = mapped_column(String(100))
+    display_name: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
 
 # Database dependency
@@ -88,7 +89,7 @@ class DatabaseManager:
             if user:
                 for key, value in kwargs.items():
                     setattr(user, key, value)
-                user.updated_at = func.now()
+                user.updated_at = datetime.now()
             else:
                 user = User(user_id=user_id, **kwargs)
                 session.add(user)
