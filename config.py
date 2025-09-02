@@ -25,10 +25,9 @@ class Settings(BaseSettings):
     port: int = 8000
     host: str = "0.0.0.0"
     
-    model_config = {
-        "env_file": ".env",
-        "case_sensitive": False
-    }
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
 
 
 # Global settings instance
