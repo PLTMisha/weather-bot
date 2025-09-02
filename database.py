@@ -3,16 +3,29 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 from config import settings
 import asyncio
+import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from datetime import datetime, time as time_type
 
+# Debug: Print database URL for troubleshooting
+print(f"DEBUG: DATABASE_URL from settings: {settings.database_url}")
+print(f"DEBUG: DATABASE_URL from env: {os.getenv('DATABASE_URL', 'NOT_SET')}")
+
+# Use environment variable directly if settings has placeholder
+database_url = settings.database_url
+if database_url.startswith("${{") or "weather-bot-db.DATABASE_URL" in database_url:
+    database_url = os.getenv('DATABASE_URL', 'sqlite:///./weather_bot.db')
+    print(f"DEBUG: Using fallback DATABASE_URL: {database_url}")
+
 # Convert database URL for async usage
-if settings.database_url.startswith("postgresql://"):
-    async_database_url = settings.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-elif settings.database_url.startswith("sqlite://"):
-    async_database_url = settings.database_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+if database_url.startswith("postgresql://"):
+    async_database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif database_url.startswith("sqlite://"):
+    async_database_url = database_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
 else:
-    async_database_url = settings.database_url
+    async_database_url = database_url
+
+print(f"DEBUG: Final async_database_url: {async_database_url}")
 
 # Create async engine
 engine = create_async_engine(async_database_url, echo=False)
