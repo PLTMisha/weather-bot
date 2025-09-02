@@ -13,6 +13,7 @@ from database import DatabaseManager, User
 from weather_api import weather_api
 from bot import weather_bot
 from localization import _
+from city_timezone_mapper import format_local_time
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,13 @@ class NotificationScheduler:
                 return
             
             # Format message
-            message = await self.format_notification_message(weather_data, user.city, user.language)
+            message = await self.format_notification_message(
+                weather_data, 
+                user.city, 
+                user.language,
+                float(user.city_lat),
+                float(user.city_lon)
+            )
             
             # Create keyboard
             keyboard = await weather_bot.get_weather_keyboard(user.language)
@@ -154,9 +161,13 @@ class NotificationScheduler:
             logger.error(f"Error sending notification to user {user.user_id}: {e}")
             raise
     
-    async def format_notification_message(self, weather_data: dict, city: str, language: str) -> str:
+    async def format_notification_message(self, weather_data: dict, city: str, language: str, city_lat: float, city_lon: float) -> str:
         """Format weather notification message"""
-        today = datetime.now().strftime("%Y-%m-%d")
+        # Get local date for the city
+        local_date, local_time = format_local_time(city_lat, city_lon)
+        # Convert date format from DD.MM.YYYY to YYYY-MM-DD
+        day, month, year = local_date.split('.')
+        today = f"{year}-{month}-{day}"
         
         # Get clothing recommendation
         clothing_advice = weather_api.get_clothing_recommendation(weather_data, language)
