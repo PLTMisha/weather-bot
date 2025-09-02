@@ -123,21 +123,48 @@ class DatabaseManager:
         async with AsyncSessionLocal() as session:
             from sqlalchemy import select
             from datetime import time
+            import pytz
             
-            # Parse time string to time object
+            # Parse UTC time string to time object
             try:
                 hour, minute = map(int, notification_time.split(':'))
-                time_obj = time(hour, minute)
+                utc_time_obj = time(hour, minute)
             except ValueError:
                 return []
             
-            # Get users who should receive notifications at this time
-            query = select(User).where(
-                User.notifications_enabled == True,
-                User.notification_time == time_obj
-            )
+            # Get all users with notifications enabled
+            query = select(User).where(User.notifications_enabled == True)
             result = await session.execute(query)
-            return result.scalars().all()
+            all_users = result.scalars().all()
+            
+            # Filter users whose local time matches the current UTC time
+            matching_users = []
+            for user in all_users:
+                if user.notification_time is None:
+                    continue
+                    
+                try:
+                    # Get user's timezone (default to Europe/Kiev for Ukrainian users)
+                    user_tz_name = user.timezone if user.timezone != "UTC" else "Europe/Kiev"
+                    user_tz = pytz.timezone(user_tz_name)
+                    
+                    # Get current UTC time
+                    utc_now = datetime.now(pytz.UTC)
+                    
+                    # Convert to user's timezone
+                    user_local_time = utc_now.astimezone(user_tz)
+                    
+                    # Check if current time in user's timezone matches their notification time
+                    if (user_local_time.hour == user.notification_time.hour and 
+                        user_local_time.minute == user.notification_time.minute):
+                        matching_users.append(user)
+                        
+                except Exception as e:
+                    # If timezone conversion fails, fall back to UTC comparison
+                    if user.notification_time == utc_time_obj:
+                        matching_users.append(user)
+            
+            return matching_users
     
     @staticmethod
     async def log_action(user_id: int, action: str, data: dict = None):

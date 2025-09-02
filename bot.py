@@ -180,8 +180,16 @@ class WeatherBot:
         user_id = callback.from_user.id
         language = callback.data.split("_")[1]  # lang_en -> en
         
-        # Create or update user with selected language
-        user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        # Determine timezone based on language
+        timezone_map = {
+            "ru": "Europe/Kiev",  # Russian speakers likely in Ukraine/Russia
+            "uk": "Europe/Kiev",  # Ukrainian speakers in Ukraine
+            "en": "UTC"           # English speakers - keep UTC
+        }
+        timezone = timezone_map.get(language, "UTC")
+        
+        # Create or update user with selected language and timezone
+        user = await DatabaseManager.create_or_update_user(user_id, language=language, timezone=timezone)
         
         # Log action
         await DatabaseManager.log_action(user_id, "language_selected", {"language": language})
