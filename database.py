@@ -16,7 +16,7 @@ database_url = settings.database_url
 if database_url.startswith("${{") or "weather-bot-db.DATABASE_URL" in database_url:
     env_url = os.getenv('DATABASE_URL', 'NOT_SET')
     if env_url == 'NOT_SET' or env_url.startswith("${{"):
-        database_url = 'sqlite:///./weather_bot.db'
+        database_url = 'sqlite+aiosqlite:///./weather_bot.db'
         print(f"DEBUG: Using SQLite fallback: {database_url}")
     else:
         database_url = env_url
@@ -25,6 +25,8 @@ if database_url.startswith("${{") or "weather-bot-db.DATABASE_URL" in database_u
 # Convert database URL for async usage
 if database_url.startswith("postgresql://"):
     async_database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif database_url.startswith("sqlite+aiosqlite://"):
+    async_database_url = database_url
 elif database_url.startswith("sqlite://"):
     async_database_url = database_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
 else:
