@@ -389,7 +389,9 @@ class WeatherBot:
             )
             
             if weather_data:
-                message = await self.format_weather_message(weather_data, user.city, language, user.timezone)
+                # Get user timezone with fallback
+                user_timezone = getattr(user, 'timezone', None) or "Europe/London"
+                message = await self.format_weather_message(weather_data, user.city, language, user_timezone)
                 keyboard = await self.get_weather_keyboard(language)
                 
                 await callback.message.edit_text(message, reply_markup=keyboard)
