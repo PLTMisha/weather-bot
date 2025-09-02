@@ -115,21 +115,17 @@ class WeatherBot:
         
         return await self.create_inline_keyboard(buttons)
     
-    async def format_weather_message(self, weather_data: Dict, city: str, language: str, user_timezone: str = "UTC") -> str:
+    async def format_weather_message(self, weather_data: Dict, city: str, language: str, city_lat: float = None, city_lon: float = None) -> str:
         """Format weather data into user message"""
-        # Get current time in user's timezone
-        utc_now = datetime.now(pytz.UTC)
-        if user_timezone and user_timezone != "UTC":
-            try:
-                user_tz = pytz.timezone(user_timezone)
-                local_now = utc_now.astimezone(user_tz)
-            except:
-                local_now = utc_now  # Fallback to UTC if timezone is invalid
+        # Get current time in city's local timezone
+        if city_lat is not None and city_lon is not None:
+            from city_timezone_mapper import format_local_time
+            today_date, current_time = format_local_time(city_lat, city_lon)
         else:
-            local_now = utc_now
-        
-        today_date = local_now.strftime("%d.%m.%Y")
-        current_time = local_now.strftime("%H:%M")
+            # Fallback to UTC if coordinates not provided
+            utc_now = datetime.now(pytz.UTC)
+            today_date = utc_now.strftime("%d.%m.%Y")
+            current_time = utc_now.strftime("%H:%M")
         
         # Get clothing recommendation
         clothing_advice = weather_api.get_clothing_recommendation(weather_data, language)
@@ -389,9 +385,14 @@ class WeatherBot:
             )
             
             if weather_data:
-                # Get user timezone with fallback
-                user_timezone = getattr(user, 'timezone', None) or "Europe/London"
-                message = await self.format_weather_message(weather_data, user.city, language, user_timezone)
+                # Use city coordinates for local time
+                message = await self.format_weather_message(
+                    weather_data, 
+                    user.city, 
+                    language, 
+                    float(user.city_lat), 
+                    float(user.city_lon)
+                )
                 keyboard = await self.get_weather_keyboard(language)
                 
                 await callback.message.edit_text(message, reply_markup=keyboard)
