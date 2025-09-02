@@ -150,25 +150,40 @@ async def webhook(request: Request):
         
         # Get update data
         update_data = await request.json()
+        logger.info(f"Received webhook update: {update_data}")
         
-        # Process update
-        await dp.feed_raw_update(weather_bot.bot, update_data)
+        # Process update with better error handling
+        try:
+            await dp.feed_raw_update(weather_bot.bot, update_data)
+            logger.info("Update processed successfully")
+        except Exception as process_error:
+            logger.error(f"Error processing update: {process_error}", exc_info=True)
+            # Don't raise here, just log and continue
         
         # Record response time
         response_time = (datetime.now() - start_time).total_seconds()
-        app_monitor.performance.record_response_time(response_time)
-        app_monitor.performance.increment_metric("requests_success")
+        try:
+            app_monitor.performance.record_response_time(response_time)
+            app_monitor.performance.increment_metric("requests_success")
+        except Exception as monitor_error:
+            logger.error(f"Monitoring error: {monitor_error}")
         
         return {"status": "ok"}
         
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        app_monitor.performance.increment_metric("requests_error")
+        logger.error(f"Webhook error: {e}", exc_info=True)
+        try:
+            app_monitor.performance.increment_metric("requests_error")
+            # Log error to monitoring
+            await app_monitor.log_error(e, "webhook")
+        except Exception as monitor_error:
+            logger.error(f"Monitoring error in exception handler: {monitor_error}")
         
-        # Log error to monitoring
-        await app_monitor.log_error(e, "webhook")
-        
-        raise HTTPException(status_code=500, detail="Internal server error")
+        # Return 200 to prevent Telegram from retrying
+        return JSONResponse(
+            status_code=200,
+            content={"status": "error", "message": "Webhook processing failed"}
+        )
 
 
 @app.get("/status")
