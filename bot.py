@@ -199,7 +199,13 @@ class WeatherBot:
         """Handle main menu navigation"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         keyboard = await self.get_main_menu_keyboard(user, language)
         await callback.message.edit_text(
@@ -213,7 +219,13 @@ class WeatherBot:
         """Handle city selection menu"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         if callback.data == "select_city":
             keyboard = await self.get_city_selection_keyboard(language)
@@ -234,7 +246,13 @@ class WeatherBot:
         """Handle time selection menu"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         if callback.data == "select_time":
             keyboard = await self.get_time_selection_keyboard(language)
@@ -255,7 +273,13 @@ class WeatherBot:
         """Handle settings menu"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         if callback.data == "settings":
             keyboard = await self.get_settings_keyboard(user, language)
@@ -281,7 +305,13 @@ class WeatherBot:
         """Handle notifications toggle"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         # Toggle notifications
         new_status = not user.notifications_enabled
@@ -308,7 +338,13 @@ class WeatherBot:
         """Handle weather now request"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         if not user.city or not user.city_lat or not user.city_lon:
             await callback.answer(_("setup_required", language))
@@ -436,7 +472,13 @@ class WeatherBot:
         """Handle hourly forecast request"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         if not user.city or not user.city_lat or not user.city_lon:
             await callback.answer(_("setup_required", language))
@@ -482,7 +524,13 @@ class WeatherBot:
         """Handle daily forecast request"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         if not user.city or not user.city_lat or not user.city_lon:
             await callback.answer(_("setup_required", language))
@@ -533,7 +581,13 @@ class WeatherBot:
         """Handle city name input with multiple city selection"""
         user_id = message.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = message.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         city_name = message.text.strip()
         
         # Show typing indicator and search message
@@ -632,7 +686,13 @@ class WeatherBot:
         """Handle selection from multiple cities"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = callback.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         
         # Get city index from callback data
         city_index = int(callback.data.split("_")[2])  # select_city_0 -> 0
@@ -673,7 +733,13 @@ class WeatherBot:
         """Handle time input"""
         user_id = message.from_user.id
         user = await DatabaseManager.get_user(user_id)
-        language = user.language if user else "en"
+        
+        # If user doesn't exist, create with default language
+        if not user:
+            language = message.from_user.language_code or "en"
+            user = await DatabaseManager.create_or_update_user(user_id, language=language)
+        
+        language = user.language
         time_str = message.text.strip()
         
         try:
