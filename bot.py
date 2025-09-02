@@ -15,6 +15,7 @@ from config import settings, DEFAULT_NOTIFICATION_TIME
 from database import DatabaseManager, User, init_db
 from weather_api import weather_api
 from localization import localization, get_user_language, _
+from city_timezone_mapper import format_local_time
 
 # Configure logging
 logging.basicConfig(level=getattr(logging, settings.log_level.upper()))
@@ -119,7 +120,6 @@ class WeatherBot:
         """Format weather data into user message"""
         # Get current time in city's local timezone
         if city_lat is not None and city_lon is not None:
-            from city_timezone_mapper import format_local_time
             today_date, current_time = format_local_time(city_lat, city_lon)
         else:
             # Fallback to UTC if coordinates not provided
