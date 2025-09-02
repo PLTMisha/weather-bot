@@ -14,8 +14,13 @@ print(f"DEBUG: DATABASE_URL from env: {os.getenv('DATABASE_URL', 'NOT_SET')}")
 # Use environment variable directly if settings has placeholder
 database_url = settings.database_url
 if database_url.startswith("${{") or "weather-bot-db.DATABASE_URL" in database_url:
-    database_url = os.getenv('DATABASE_URL', 'sqlite:///./weather_bot.db')
-    print(f"DEBUG: Using fallback DATABASE_URL: {database_url}")
+    env_url = os.getenv('DATABASE_URL', 'NOT_SET')
+    if env_url == 'NOT_SET' or env_url.startswith("${{"):
+        database_url = 'sqlite:///./weather_bot.db'
+        print(f"DEBUG: Using SQLite fallback: {database_url}")
+    else:
+        database_url = env_url
+        print(f"DEBUG: Using env DATABASE_URL: {database_url}")
 
 # Convert database URL for async usage
 if database_url.startswith("postgresql://"):
