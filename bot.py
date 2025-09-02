@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import datetime, time
 from typing import Optional, Dict, Any
+import pytz
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -114,11 +115,21 @@ class WeatherBot:
         
         return await self.create_inline_keyboard(buttons)
     
-    async def format_weather_message(self, weather_data: Dict, city: str, language: str) -> str:
+    async def format_weather_message(self, weather_data: Dict, city: str, language: str, user_timezone: str = "UTC") -> str:
         """Format weather data into user message"""
-        now = datetime.now()
-        today_date = now.strftime("%d.%m.%Y")
-        current_time = now.strftime("%H:%M")
+        # Get current time in user's timezone
+        utc_now = datetime.now(pytz.UTC)
+        if user_timezone and user_timezone != "UTC":
+            try:
+                user_tz = pytz.timezone(user_timezone)
+                local_now = utc_now.astimezone(user_tz)
+            except:
+                local_now = utc_now  # Fallback to UTC if timezone is invalid
+        else:
+            local_now = utc_now
+        
+        today_date = local_now.strftime("%d.%m.%Y")
+        current_time = local_now.strftime("%H:%M")
         
         # Get clothing recommendation
         clothing_advice = weather_api.get_clothing_recommendation(weather_data, language)
@@ -182,11 +193,11 @@ class WeatherBot:
         
         # Determine timezone based on language
         timezone_map = {
-            "ru": "Europe/Kiev",  # Russian speakers likely in Ukraine/Russia
-            "uk": "Europe/Kiev",  # Ukrainian speakers in Ukraine
-            "en": "UTC"           # English speakers - keep UTC
+            "ru": "Europe/Kiev",    # Russian speakers likely in Ukraine/Russia
+            "uk": "Europe/Kiev",    # Ukrainian speakers in Ukraine
+            "en": "Europe/London"   # English speakers likely in UK
         }
-        timezone = timezone_map.get(language, "UTC")
+        timezone = timezone_map.get(language, "Europe/London")
         
         # Create or update user with selected language and timezone
         user = await DatabaseManager.create_or_update_user(user_id, language=language, timezone=timezone)
@@ -378,7 +389,7 @@ class WeatherBot:
             )
             
             if weather_data:
-                message = await self.format_weather_message(weather_data, user.city, language)
+                message = await self.format_weather_message(weather_data, user.city, language, user.timezone)
                 keyboard = await self.get_weather_keyboard(language)
                 
                 await callback.message.edit_text(message, reply_markup=keyboard)
