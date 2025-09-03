@@ -29,11 +29,11 @@ class Localization:
                 "enter_city_name": "Please enter your city name:",
                 
                 # Time selection
-                "select_time": "⏰ Select notification time:\n\n🌍 Time zone: Based on your city ({city})\n⚠️ Note: Notifications work only at times divisible by 15 minutes (e.g., 09:00, 09:15, 09:30, 09:45)",
+                "select_time": "⏰ Select notification time:\n\n🌍 Time zone: Based on your city ({city})\n✅ You can set notifications for any time (e.g., 07:23, 08:47, 14:15)",
                 "custom_time": "✏️ Custom time",
                 "time_set": "✅ Notification time set to: {time}\n🌍 Time zone: {city} local time\n📅 Next notification: tomorrow at {time} ({city} time)",
-                "enter_time": "Please enter time in HH:MM format.\n\n🌍 Time will be in {city} local time\n⚠️ Important: Use times divisible by 15 minutes!\n✅ Examples: 07:00, 08:15, 09:30, 16:45\n❌ Won't work: 07:05, 08:23, 09:37",
-                "invalid_time": "❌ Invalid time format. Please use HH:MM (e.g., 09:30)\n⚠️ Remember: only times divisible by 15 minutes work!",
+                "enter_time": "Please enter time in HH:MM format.\n\n🌍 ⚠️ IMPORTANT: Time will be in {city} LOCAL TIME\n✅ You can use any time (e.g., 07:23, 08:47, 14:15, 19:42)",
+                "invalid_time": "❌ Invalid time format. Please use HH:MM (e.g., 09:30)",
                 "city_timezone_info": "🌍 Your notifications will arrive at {time} {city} local time",
                 
                 # Settings menu
@@ -62,10 +62,10 @@ class Localization:
 🌤 Check current weather anytime
 
 ⚠️ Important about notifications:
-• Notifications work only at times divisible by 15 minutes
-• Examples: 07:00, 08:15, 09:30, 16:45, 21:00
-• Times like 07:05, 08:23, 09:37 won't work
+• You can set notifications for any time (e.g., 07:23, 08:47, 14:15)
+• Time is based on your city's local timezone
 • Notifications are sent daily at your chosen time
+• You can change the time anytime in settings
 
 The bot will send you daily weather forecasts with clothing recommendations!""",
                 
@@ -147,11 +147,11 @@ The bot will send you daily weather forecasts with clothing recommendations!""",
                 "enter_city_name": "Пожалуйста, введите название вашего города:",
                 
                 # Time selection
-                "select_time": "⏰ Выберите время уведомлений:\n\n🌍 Часовой пояс: По времени вашего города ({city})\n⚠️ Важно: Уведомления работают только в время кратное 15 минутам (например, 09:00, 09:15, 09:30, 09:45)",
+                "select_time": "⏰ Выберите время уведомлений:\n\n🌍 Часовой пояс: По времени вашего города ({city})\n✅ Можно установить уведомления на любое время (например, 07:23, 08:47, 14:15)",
                 "custom_time": "✏️ Другое время",
                 "time_set": "✅ Время уведомлений установлено: {time}\n🌍 Часовой пояс: местное время {city}\n📅 Следующее уведомление: завтра в {time} (время {city})",
-                "enter_time": "Пожалуйста, введите время в формате ЧЧ:ММ.\n\n🌍 Время будет по местному времени {city}\n⚠️ Важно: Используйте время кратное 15 минутам!\n✅ Примеры: 07:00, 08:15, 09:30, 16:45\n❌ Не сработает: 07:05, 08:23, 09:37",
-                "invalid_time": "❌ Неверный формат времени. Используйте ЧЧ:ММ (например, 09:30)\n⚠️ Помните: работает только время кратное 15 минутам!",
+                "enter_time": "Пожалуйста, введите время в формате ЧЧ:ММ.\n\n🌍 ⚠️ ВАЖНО: Время будет по МЕСТНОМУ времени {city}\n✅ Можно использовать любое время (например, 07:23, 08:47, 14:15, 19:42)",
+                "invalid_time": "❌ Неверный формат времени. Используйте ЧЧ:ММ (например, 09:30)",
                 "city_timezone_info": "🌍 Ваши уведомления будут приходить в {time} по местному времени {city}",
                 
                 # Settings menu
@@ -180,10 +180,10 @@ The bot will send you daily weather forecasts with clothing recommendations!""",
 🌤 Проверяйте текущую погоду в любое время
 
 ⚠️ Важно про уведомления:
-• Уведомления работают только в время кратное 15 минутам
-• Примеры: 07:00, 08:15, 09:30, 16:45, 21:00
-• Время типа 07:05, 08:23, 09:37 не сработает
+• Можно установить уведомления на любое время (например, 07:23, 08:47, 14:15)
+• Время основано на местном времени вашего города
 • Уведомления приходят каждый день в выбранное время
+• Время можно изменить в любой момент в настройках
 
 Бот будет отправлять вам ежедневные прогнозы погоды с рекомендациями по одежде!""",
                 
@@ -265,11 +265,11 @@ The bot will send you daily weather forecasts with clothing recommendations!""",
                 "enter_city_name": "Будь ласка, введіть назву вашого міста:",
                 
                 # Time selection
-                "select_time": "⏰ Оберіть час сповіщень:\n\n🌍 Часовий пояс: За часом вашого міста ({city})\n⚠️ Важливо: Сповіщення працюють тільки в час кратний 15 хвилинам (наприклад, 09:00, 09:15, 09:30, 09:45)",
+                "select_time": "⏰ Оберіть час сповіщень:\n\n🌍 Часовий пояс: За часом вашого міста ({city})\n✅ Можна встановити сповіщення на будь-який час (наприклад, 07:23, 08:47, 14:15)",
                 "custom_time": "✏️ Інший час",
                 "time_set": "✅ Час сповіщень встановлено: {time}\n🌍 Часовий пояс: місцевий час {city}\n📅 Наступне сповіщення: завтра о {time} (час {city})",
-                "enter_time": "Будь ласка, введіть час у форматі ГГ:ХХ.\n\n🌍 Час буде за місцевим часом {city}\n⚠️ Важливо: Використовуйте час кратний 15 хвилинам!\n✅ Приклади: 07:00, 08:15, 09:30, 16:45\n❌ Не спрацює: 07:05, 08:23, 09:37",
-                "invalid_time": "❌ Невірний формат часу. Використовуйте ГГ:ХХ (наприклад, 09:30)\n⚠️ Пам'ятайте: працює тільки час кратний 15 хвилинам!",
+                "enter_time": "Будь ласка, введіть час у форматі ГГ:ХХ.\n\n🌍 ⚠️ ВАЖЛИВО: Час буде за МІСЦЕВИМ часом {city}\n✅ Можна використовувати будь-який час (наприклад, 07:23, 08:47, 14:15, 19:42)",
+                "invalid_time": "❌ Невірний формат часу. Використовуйте ГГ:ХХ (наприклад, 09:30)",
                 "city_timezone_info": "🌍 Ваші сповіщення будуть приходити о {time} за місцевим часом {city}",
                 
                 # Settings menu
@@ -298,10 +298,10 @@ The bot will send you daily weather forecasts with clothing recommendations!""",
 🌤 Перевіряйте поточну погоду в будь-який час
 
 ⚠️ Важливо про сповіщення:
-• Сповіщення працюють тільки в час кратний 15 хвилинам
-• Приклади: 07:00, 08:15, 09:30, 16:45, 21:00
-• Час типу 07:05, 08:23, 09:37 не спрацює
+• Можна встановити сповіщення на будь-який час (наприклад, 07:23, 08:47, 14:15)
+• Час базується на місцевому часі вашого міста
 • Сповіщення приходять щодня в обраний час
+• Час можна змінити в будь-який момент в налаштуваннях
 
 Бот буде надсилати вам щоденні прогнози погоди з рекомендаціями по одязі!""",
                 
