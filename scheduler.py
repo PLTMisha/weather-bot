@@ -36,7 +36,7 @@ class NotificationScheduler:
             
             # Add notification jobs for each hour
             for hour in range(24):
-                for minute in [0, 15, 30, 45]:  # Check every 15 minutes
+                for minute in range(60):  # Check every minute
                     self.scheduler.add_job(
                         self.send_scheduled_notifications,
                         CronTrigger(hour=hour, minute=minute),
