@@ -40,7 +40,6 @@ class WeatherBot:
         self.dp = dp
         
     async def create_inline_keyboard(self, buttons: list) -> InlineKeyboardMarkup:
-        """Create inline keyboard from button list"""
         keyboard = []
         for row in buttons:
             keyboard_row = []
@@ -50,7 +49,6 @@ class WeatherBot:
         return InlineKeyboardMarkup(inline_keyboard=keyboard)
     
     async def get_main_menu_keyboard(self, user: User, language: str) -> InlineKeyboardMarkup:
-        """Generate main menu keyboard"""
         city_text = _(
             "my_city" if user.city else "my_city_not_set", 
             language, 
@@ -73,7 +71,6 @@ class WeatherBot:
         return await self.create_inline_keyboard(buttons)
     
     async def get_city_selection_keyboard(self, language: str) -> InlineKeyboardMarkup:
-        """Generate city selection keyboard"""
         buttons = localization.get_popular_cities(language)
         buttons.append([(_("enter_city", language), "enter_custom_city")])
         buttons.append([(_("back_to_menu", language), "main_menu")])
@@ -81,7 +78,6 @@ class WeatherBot:
         return await self.create_inline_keyboard(buttons)
     
     async def get_time_selection_keyboard(self, language: str) -> InlineKeyboardMarkup:
-        """Generate time selection keyboard"""
         buttons = localization.get_time_slots(language)
         buttons.append([(_("custom_time", language), "enter_custom_time")])
         buttons.append([(_("back_to_menu", language), "main_menu")])
@@ -89,7 +85,6 @@ class WeatherBot:
         return await self.create_inline_keyboard(buttons)
     
     async def get_settings_keyboard(self, user: User, language: str) -> InlineKeyboardMarkup:
-        """Generate settings keyboard"""
         notifications_status = "Вкл" if user.notifications_enabled else "Выкл" if language == "ru" else "On" if user.notifications_enabled else "Off"
         
         buttons = [
@@ -104,7 +99,6 @@ class WeatherBot:
         return await self.create_inline_keyboard(buttons)
     
     async def get_weather_keyboard(self, language: str) -> InlineKeyboardMarkup:
-        """Generate weather display keyboard"""
         buttons = [
             [(_("hourly_forecast", language), "hourly_forecast"), (_("daily_forecast", language), "daily_forecast")],
             [(_("refresh", language), "weather_now"), (_("settings", language), "settings")],
@@ -114,20 +108,15 @@ class WeatherBot:
         return await self.create_inline_keyboard(buttons)
     
     async def format_weather_message(self, weather_data: Dict, city: str, language: str, city_lat: float = None, city_lon: float = None) -> str:
-        """Format weather data into user message"""
-        # Get current time in city's local timezone
         if city_lat is not None and city_lon is not None:
             today_date, current_time = format_local_time(city_lat, city_lon)
         else:
-            # Fallback to UTC if coordinates not provided
             utc_now = datetime.now(pytz.UTC)
             today_date = utc_now.strftime("%d.%m.%Y")
             current_time = utc_now.strftime("%H:%M")
         
-        # Get clothing recommendation
         clothing_advice = weather_api.get_clothing_recommendation(weather_data, language)
         
-        # Include date and time in the main weather title
         if language == "ru":
             weather_title = f"🌤 Погода в {city} на {today_date} в {current_time}"
         elif language == "uk":
@@ -151,9 +140,7 @@ class WeatherBot:
         
         return message
 
-    # Command handlers
     async def cmd_start(self, message: Message, state: FSMContext):
-        """Handle /start command"""
         user_id = message.from_user.id
         
         # Log user action
@@ -182,25 +169,20 @@ class WeatherBot:
     
     # Callback handlers
     async def handle_language_selection(self, callback: CallbackQuery, state: FSMContext):
-        """Handle language selection"""
         user_id = callback.from_user.id
-        language = callback.data.split("_")[1]  # lang_en -> en
+        language = callback.data.split("_")[1]
         
-        # Determine timezone based on language
         timezone_map = {
-            "ru": "Europe/Kiev",    # Russian speakers likely in Ukraine/Russia
-            "uk": "Europe/Kiev",    # Ukrainian speakers in Ukraine
-            "en": "Europe/London"   # English speakers likely in UK
+            "ru": "Europe/Kiev",
+            "uk": "Europe/Kiev",
+            "en": "Europe/London"
         }
         timezone = timezone_map.get(language, "Europe/London")
         
-        # Create or update user with selected language and timezone
         user = await DatabaseManager.create_or_update_user(user_id, language=language, timezone=timezone)
         
-        # Log action
         await DatabaseManager.log_action(user_id, "language_selected", {"language": language})
         
-        # Show welcome message and main menu
         keyboard = await self.get_main_menu_keyboard(user, language)
         await callback.message.edit_text(
             _("welcome_message", language),
@@ -210,11 +192,9 @@ class WeatherBot:
         await state.set_state(BotStates.MAIN_MENU)
     
     async def handle_main_menu(self, callback: CallbackQuery, state: FSMContext):
-        """Handle main menu navigation"""
         user_id = callback.from_user.id
         user = await DatabaseManager.get_user(user_id)
         
-        # If user doesn't exist, create with default language
         if not user:
             language = callback.from_user.language_code or "en"
             user = await DatabaseManager.create_or_update_user(user_id, language=language)

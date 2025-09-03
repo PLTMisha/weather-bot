@@ -81,7 +81,6 @@ app = FastAPI(
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
         "message": "Weather Bot API",
         "version": "1.0.0",
@@ -92,7 +91,6 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring"""
     try:
         status = await get_system_status()
         
@@ -121,7 +119,6 @@ async def health_check():
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    """Webhook endpoint for Telegram updates"""
     try:
         # Record request start time for performance monitoring
         start_time = datetime.now()
@@ -174,7 +171,6 @@ async def webhook(request: Request):
 
 @app.get("/status")
 async def get_status():
-    """Get detailed application status"""
     try:
         return await get_system_status()
     except Exception as e:
@@ -184,7 +180,6 @@ async def get_status():
 
 @app.get("/metrics")
 async def get_metrics():
-    """Get application metrics"""
     try:
         return app_monitor.performance.get_metrics()
     except Exception as e:
@@ -194,7 +189,6 @@ async def get_metrics():
 
 @app.post("/admin/test-notification/{user_id}")
 async def send_test_notification(user_id: int):
-    """Send test notification to a user (admin endpoint)"""
     try:
         from scheduler import send_manual_notification
         await send_manual_notification(user_id)
@@ -206,7 +200,6 @@ async def send_test_notification(user_id: int):
 
 @app.get("/admin/users-at-time/{time_str}")
 async def get_users_at_time(time_str: str):
-    """Get users who have notifications at specific time (admin endpoint)"""
     try:
         from scheduler import get_users_with_notifications_at_time
         users = await get_users_with_notifications_at_time(time_str)
@@ -230,7 +223,6 @@ async def get_users_at_time(time_str: str):
 
 @app.get("/admin/scheduler-status")
 async def get_scheduler_status():
-    """Get scheduler status (admin endpoint)"""
     try:
         from scheduler import schedule_status
         return await schedule_status()
@@ -241,15 +233,12 @@ async def get_scheduler_status():
 
 @app.post("/admin/setup-webhook")
 async def setup_webhook_endpoint():
-    """Setup webhook after deployment (admin endpoint)"""
     try:
         webhook_url = "https://weather-bot-y5fd.onrender.com/webhook"
         
-        # Delete existing webhook first
         await weather_bot.bot.delete_webhook(drop_pending_updates=True)
         logger.info("Deleted existing webhook")
         
-        # Set new webhook
         result = await weather_bot.bot.set_webhook(
             url=webhook_url,
             drop_pending_updates=True
@@ -258,7 +247,6 @@ async def setup_webhook_endpoint():
         if result:
             logger.info(f"Webhook set successfully to: {webhook_url}")
             
-            # Get webhook info to verify
             webhook_info = await weather_bot.bot.get_webhook_info()
             
             return {
@@ -281,13 +269,10 @@ async def setup_webhook_endpoint():
         }
 
 
-# Error handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     
-    # Log to monitoring
     await app_monitor.log_error(exc, "global_handler", path=str(request.url))
     
     return JSONResponse(
@@ -299,10 +284,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Middleware for request logging
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    """Log all HTTP requests"""
     start_time = datetime.now()
     
     response = await call_next(request)
