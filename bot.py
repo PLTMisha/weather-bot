@@ -133,6 +133,8 @@ class WeatherBot:
         # Include date and time in the main weather title
         if language == "ru":
             weather_title = f"🌤 Погода в {city} на {today_date} в {current_time}"
+        elif language == "uk":
+            weather_title = f"🌤 Погода в {city} на {today_date} о {current_time}"
         else:
             weather_title = f"🌤 Weather in {city} for {today_date} at {current_time}"
         
@@ -518,13 +520,15 @@ class WeatherBot:
         )
         
         if weather_data and weather_data.get("hourly_forecast"):
-            today = datetime.now().strftime("%d.%m.%Y")
-            message = _("hourly_title", language, date=today) + "\n\n"
+            # Get current time in city's local timezone (same as main weather display)
+            today_date, current_time = format_local_time(float(user.city_lat), float(user.city_lon))
+            current_hour = int(current_time.split(':')[0])  # Extract hour from local time
+            
+            message = _("hourly_title", language, date=today_date) + "\n\n"
             
             hourly_data = weather_data["hourly_forecast"]
-            current_hour = datetime.now().hour
             
-            # Show next 12 hours starting from current hour
+            # Show next 12 hours starting from current local hour
             for i, hour_data in enumerate(hourly_data[current_hour:current_hour+12]):
                 if i < len(hourly_data):
                     # Get weather emoji based on weather code
