@@ -271,13 +271,15 @@ class WeatherBot:
         
         if callback.data == "select_time":
             keyboard = await self.get_time_selection_keyboard(language)
+            city_name = user.city or "your city"
             await callback.message.edit_text(
-                _("select_time", language),
+                _("select_time", language, city=city_name),
                 reply_markup=keyboard
             )
             await callback.answer()
         elif callback.data == "enter_custom_time":
-            await callback.message.edit_text(_("enter_time", language))
+            city_name = user.city or "your city"
+            await callback.message.edit_text(_("enter_time", language, city=city_name))
             await callback.answer()
             await state.set_state(BotStates.WAITING_TIME)
         elif callback.data.startswith("time_"):
@@ -463,7 +465,8 @@ class WeatherBot:
                 _("main_menu", language),
                 reply_markup=keyboard
             )
-            await callback.answer(_("time_set", language, time=time_str))
+            city_name = user.city or "your city"
+            await callback.answer(_("time_set", language, time=time_str, city=city_name))
             await state.set_state(BotStates.MAIN_MENU)
         except ValueError:
             await callback.answer(_("invalid_time", language))

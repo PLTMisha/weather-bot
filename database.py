@@ -124,6 +124,7 @@ class DatabaseManager:
             from sqlalchemy import select
             from datetime import time
             import pytz
+            from city_timezone_mapper import get_timezone_by_coordinates
             
             # Parse UTC time string to time object
             try:
@@ -132,31 +133,35 @@ class DatabaseManager:
             except ValueError:
                 return []
             
-            # Get all users with notifications enabled
-            query = select(User).where(User.notifications_enabled == True)
+            # Get all users with notifications enabled and city coordinates
+            query = select(User).where(
+                User.notifications_enabled == True,
+                User.city_lat.isnot(None),
+                User.city_lon.isnot(None)
+            )
             result = await session.execute(query)
             all_users = result.scalars().all()
             
-            # Filter users whose local time matches the current UTC time
+            # Filter users whose city local time matches the current UTC time
             matching_users = []
             for user in all_users:
                 if user.notification_time is None:
                     continue
                     
                 try:
-                    # Get user's timezone (default to Europe/Kiev for Ukrainian users)
-                    user_tz_name = user.timezone if user.timezone != "UTC" else "Europe/Kiev"
-                    user_tz = pytz.timezone(user_tz_name)
+                    # Get timezone based on city coordinates
+                    city_tz_name = get_timezone_by_coordinates(float(user.city_lat), float(user.city_lon))
+                    city_tz = pytz.timezone(city_tz_name)
                     
                     # Get current UTC time
                     utc_now = datetime.now(pytz.UTC)
                     
-                    # Convert to user's timezone
-                    user_local_time = utc_now.astimezone(user_tz)
+                    # Convert to city's timezone
+                    city_local_time = utc_now.astimezone(city_tz)
                     
-                    # Check if current time in user's timezone matches their notification time
-                    if (user_local_time.hour == user.notification_time.hour and 
-                        user_local_time.minute == user.notification_time.minute):
+                    # Check if current time in city's timezone matches their notification time
+                    if (city_local_time.hour == user.notification_time.hour and 
+                        city_local_time.minute == user.notification_time.minute):
                         matching_users.append(user)
                         
                 except Exception as e:
