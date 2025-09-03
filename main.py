@@ -144,6 +144,14 @@ async def webhook(request: Request):
         update_data = await request.json()
         logger.info(f"Received webhook update: {update_data}")
         
+        # Validate and fix update data before processing
+        if "message" in update_data and "from" in update_data["message"]:
+            from_user = update_data["message"]["from"]
+            # Add missing is_bot field if not present
+            if "is_bot" not in from_user:
+                from_user["is_bot"] = False
+                logger.debug("Added missing is_bot field to message.from")
+        
         # Process update with better error handling
         try:
             await dp.feed_raw_update(weather_bot.bot, update_data)
