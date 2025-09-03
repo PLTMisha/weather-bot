@@ -146,8 +146,9 @@ class HealthChecker:
         """Check database connectivity"""
         try:
             from database import AsyncSessionLocal
+            from sqlalchemy import text
             async with AsyncSessionLocal() as session:
-                await session.execute("SELECT 1")
+                await session.execute(text("SELECT 1"))
             self.checks["database"] = {"status": "healthy", "timestamp": datetime.now().isoformat()}
             return True
         except Exception as e:
