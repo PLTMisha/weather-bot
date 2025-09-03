@@ -24,31 +24,22 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    # Startup
     logger.info("Starting Weather Bot application...")
     
     try:
-        # Initialize database
         await init_db()
         logger.info("Database initialized")
         
-        # Register bot handlers
         weather_bot.register_handlers()
         logger.info("Bot handlers registered")
         
-        # Start monitoring
         await app_monitor.start_monitoring()
         logger.info("Monitoring started")
         
-        # Start scheduler
         await notification_scheduler.start()
         logger.info("Scheduler started")
         
-        # Don't set webhook during startup on Render - it causes timeout
-        # Webhook will be set manually after deployment
         logger.info("Bot initialization complete - webhook setup skipped during startup")
-        
         logger.info("Weather Bot application started successfully!")
         
     except Exception as e:
@@ -57,24 +48,19 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
     logger.info("Shutting down Weather Bot application...")
     
     try:
-        # Stop scheduler
         await notification_scheduler.stop()
         logger.info("Scheduler stopped")
         
-        # Close weather API client
         await weather_api.close()
         logger.info("Weather API client closed")
         
-        # Delete webhook
         if settings.webhook_url:
             await weather_bot.bot.delete_webhook()
             logger.info("Webhook deleted")
         
-        # Close bot session
         await weather_bot.bot.session.close()
         logger.info("Bot session closed")
         

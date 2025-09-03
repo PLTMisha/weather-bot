@@ -17,21 +17,18 @@ from weather_api import weather_api
 from localization import localization, get_user_language, _
 from city_timezone_mapper import format_local_time
 
-# Configure logging
 logging.basicConfig(level=getattr(logging, settings.log_level.upper()))
 logger = logging.getLogger(__name__)
 
-# Bot states
 class BotStates(StatesGroup):
     LANGUAGE_SELECT = State()
     MAIN_MENU = State()
     WAITING_CITY = State()
-    SELECTING_CITY = State()  # New state for selecting from multiple cities
+    SELECTING_CITY = State()
     WAITING_TIME = State()
     IN_SETTINGS = State()
     VIEWING_WEATHER = State()
 
-# Initialize bot and dispatcher
 bot = Bot(token=settings.telegram_bot_token)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
