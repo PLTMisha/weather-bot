@@ -38,6 +38,18 @@ class WeatherBot:
     def __init__(self):
         self.bot = bot
         self.dp = dp
+        self.user_last_action = {}  # Track last action time per user
+        self.throttle_seconds = 2  # Minimum seconds between actions
+    
+    async def is_throttled(self, user_id: int) -> bool:
+        now = datetime.now().timestamp()
+        last_action = self.user_last_action.get(user_id, 0)
+        
+        if now - last_action < self.throttle_seconds:
+            return True
+        
+        self.user_last_action[user_id] = now
+        return False
         
     async def create_inline_keyboard(self, buttons: list) -> InlineKeyboardMarkup:
         keyboard = []
@@ -170,6 +182,12 @@ class WeatherBot:
     # Callback handlers
     async def handle_language_selection(self, callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         language = callback.data.split("_")[1]
         
         timezone_map = {
@@ -193,6 +211,12 @@ class WeatherBot:
     
     async def handle_main_menu(self, callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         if not user:
@@ -212,6 +236,12 @@ class WeatherBot:
     async def handle_city_selection(self, callback: CallbackQuery, state: FSMContext):
         """Handle city selection menu"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -239,6 +269,12 @@ class WeatherBot:
     async def handle_time_selection(self, callback: CallbackQuery, state: FSMContext):
         """Handle time selection menu"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -268,6 +304,12 @@ class WeatherBot:
     async def handle_settings(self, callback: CallbackQuery, state: FSMContext):
         """Handle settings menu"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -300,6 +342,12 @@ class WeatherBot:
     async def handle_notifications_toggle(self, callback: CallbackQuery, state: FSMContext):
         """Handle notifications toggle"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -333,6 +381,12 @@ class WeatherBot:
     async def handle_weather_now(self, callback: CallbackQuery, state: FSMContext):
         """Handle weather now request"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -475,6 +529,12 @@ class WeatherBot:
     async def handle_hourly_forecast(self, callback: CallbackQuery, state: FSMContext):
         """Handle hourly forecast request"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -529,6 +589,12 @@ class WeatherBot:
     async def handle_daily_forecast(self, callback: CallbackQuery, state: FSMContext):
         """Handle daily forecast request"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language
@@ -691,6 +757,12 @@ class WeatherBot:
     async def handle_city_selection_from_list(self, callback: CallbackQuery, state: FSMContext):
         """Handle selection from multiple cities"""
         user_id = callback.from_user.id
+        
+        # Apply throttling
+        if await self.is_throttled(user_id):
+            await callback.answer()
+            return
+        
         user = await DatabaseManager.get_user(user_id)
         
         # If user doesn't exist, create with default language

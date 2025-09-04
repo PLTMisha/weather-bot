@@ -22,11 +22,10 @@ class NotificationScheduler:
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         self.bot = weather_bot.bot
+        self.processing_notifications = False
         
     async def start(self):
-        """Start the scheduler"""
         try:
-            # Add keep-alive job for Render.com
             self.scheduler.add_job(
                 self.keep_alive_ping,
                 IntervalTrigger(seconds=KEEP_ALIVE_INTERVAL),
@@ -34,19 +33,16 @@ class NotificationScheduler:
                 name="Keep Alive Ping"
             )
             
-            # Add notification jobs for each hour
-            for hour in range(24):
-                for minute in range(60):  # Check every minute
-                    self.scheduler.add_job(
-                        self.send_scheduled_notifications,
-                        CronTrigger(hour=hour, minute=minute),
-                        id=f"notifications_{hour:02d}_{minute:02d}",
-                        name=f"Notifications {hour:02d}:{minute:02d}",
-                        args=[f"{hour:02d}:{minute:02d}"]
-                    )
+            # Optimized: Check every minute instead of creating 1440 jobs
+            self.scheduler.add_job(
+                self.check_notifications,
+                CronTrigger(second=0),  # Run every minute at second 0
+                id="notification_checker",
+                name="Notification Checker"
+            )
             
             self.scheduler.start()
-            logger.info("Scheduler started successfully")
+            logger.info("Optimized scheduler started with single checker job")
             
         except Exception as e:
             logger.error(f"Failed to start scheduler: {e}")
@@ -60,12 +56,10 @@ class NotificationScheduler:
             logger.error(f"Error stopping scheduler: {e}")
     
     async def keep_alive_ping(self):
-        """Keep-alive ping to prevent Render.com from sleeping"""
         try:
             import httpx
             
             if settings.webhook_url:
-                # Extract base URL from webhook URL
                 base_url = settings.webhook_url.replace("/webhook", "")
                 health_url = f"{base_url}/health"
                 
@@ -78,6 +72,39 @@ class NotificationScheduler:
             
         except Exception as e:
             logger.error(f"Keep-alive ping failed: {e}")
+    
+    async def check_notifications(self):
+        if self.processing_notifications:
+            logger.debug("Skipping notification check - already processing")
+            return
+            
+        try:
+            self.processing_notifications = True
+            current_time = datetime.now()
+            time_str = f"{current_time.hour:02d}:{current_time.minute:02d}"
+            
+            users = await DatabaseManager.get_users_for_notification(time_str)
+            
+            if users:
+                logger.info(f"Processing {len(users)} notifications for {time_str}")
+                
+                # Process in batches to avoid overwhelming the system
+                batch_size = 5
+                for i in range(0, len(users), batch_size):
+                    batch = users[i:i + batch_size]
+                    
+                    # Process batch concurrently but with limited concurrency
+                    tasks = [self.send_weather_notification(user) for user in batch]
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    # Small delay between batches
+                    if i + batch_size < len(users):
+                        await asyncio.sleep(0.5)
+                        
+        except Exception as e:
+            logger.error(f"Error in check_notifications: {e}")
+        finally:
+            self.processing_notifications = False
     
     async def send_scheduled_notifications(self, notification_time: str):
         """Send notifications to users at specified time"""
