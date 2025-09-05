@@ -39,16 +39,26 @@ class WeatherBot:
         self.bot = bot
         self.dp = dp
         self.user_last_action = {}  # Track last action time per user
-        self.throttle_seconds = 2  # Minimum seconds between actions
+        self.user_action_types = {}  # Track action types per user
+        
+        # Smart throttling - different intervals for different actions
+        self.throttle_config = {
+            'navigation': 0.3,      # Quick navigation (menus, back buttons)
+            'weather': 1.0,         # Weather requests (API calls)
+            'settings': 0.5,        # Settings changes
+            'default': 0.5          # Default for other actions
+        }
     
-    async def is_throttled(self, user_id: int) -> bool:
+    async def is_throttled(self, user_id: int, action_type: str = 'default') -> bool:
         now = datetime.now().timestamp()
         last_action = self.user_last_action.get(user_id, 0)
+        throttle_time = self.throttle_config.get(action_type, self.throttle_config['default'])
         
-        if now - last_action < self.throttle_seconds:
+        if now - last_action < throttle_time:
             return True
         
         self.user_last_action[user_id] = now
+        self.user_action_types[user_id] = action_type
         return False
         
     async def create_inline_keyboard(self, buttons: list) -> InlineKeyboardMarkup:
@@ -183,8 +193,8 @@ class WeatherBot:
     async def handle_language_selection(self, callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for settings
+        if await self.is_throttled(user_id, 'settings'):
             await callback.answer()
             return
         
@@ -212,8 +222,8 @@ class WeatherBot:
     async def handle_main_menu(self, callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for navigation
+        if await self.is_throttled(user_id, 'navigation'):
             await callback.answer()
             return
         
@@ -237,8 +247,8 @@ class WeatherBot:
         """Handle city selection menu"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for navigation
+        if await self.is_throttled(user_id, 'navigation'):
             await callback.answer()
             return
         
@@ -270,8 +280,8 @@ class WeatherBot:
         """Handle time selection menu"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for navigation
+        if await self.is_throttled(user_id, 'navigation'):
             await callback.answer()
             return
         
@@ -305,8 +315,8 @@ class WeatherBot:
         """Handle settings menu"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for navigation
+        if await self.is_throttled(user_id, 'navigation'):
             await callback.answer()
             return
         
@@ -343,8 +353,8 @@ class WeatherBot:
         """Handle notifications toggle"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for settings
+        if await self.is_throttled(user_id, 'settings'):
             await callback.answer()
             return
         
@@ -382,8 +392,8 @@ class WeatherBot:
         """Handle weather now request"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for weather requests
+        if await self.is_throttled(user_id, 'weather'):
             await callback.answer()
             return
         
@@ -530,8 +540,8 @@ class WeatherBot:
         """Handle hourly forecast request"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for weather requests
+        if await self.is_throttled(user_id, 'weather'):
             await callback.answer()
             return
         
@@ -590,8 +600,8 @@ class WeatherBot:
         """Handle daily forecast request"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for weather requests
+        if await self.is_throttled(user_id, 'weather'):
             await callback.answer()
             return
         
@@ -758,8 +768,8 @@ class WeatherBot:
         """Handle selection from multiple cities"""
         user_id = callback.from_user.id
         
-        # Apply throttling
-        if await self.is_throttled(user_id):
+        # Apply throttling for settings
+        if await self.is_throttled(user_id, 'settings'):
             await callback.answer()
             return
         

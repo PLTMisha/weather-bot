@@ -89,7 +89,7 @@ class NotificationScheduler:
                 logger.info(f"Processing {len(users)} notifications for {time_str}")
                 
                 # Process in batches to avoid overwhelming the system
-                batch_size = 5
+                batch_size = 10  # Increased batch size
                 for i in range(0, len(users), batch_size):
                     batch = users[i:i + batch_size]
                     
@@ -97,9 +97,9 @@ class NotificationScheduler:
                     tasks = [self.send_weather_notification(user) for user in batch]
                     await asyncio.gather(*tasks, return_exceptions=True)
                     
-                    # Small delay between batches
+                    # Reduced delay between batches
                     if i + batch_size < len(users):
-                        await asyncio.sleep(0.5)
+                        await asyncio.sleep(0.1)  # Reduced from 0.5 to 0.1
                         
         except Exception as e:
             logger.error(f"Error in check_notifications: {e}")
@@ -121,7 +121,7 @@ class NotificationScheduler:
             for user in users:
                 try:
                     await self.send_weather_notification(user)
-                    await asyncio.sleep(0.1)  # Small delay to avoid rate limiting
+                    await asyncio.sleep(0.05)  # Reduced delay to avoid rate limiting
                     
                 except Exception as e:
                     logger.error(f"Failed to send notification to user {user.user_id}: {e}")
