@@ -14,8 +14,7 @@ class WeatherAPI:
         # Увеличиваем таймаут и добавляем retry логику
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(30.0, connect=10.0),
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
-            retries=3
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
         )
         self.cache = {}
         self._last_nominatim_request = 0
