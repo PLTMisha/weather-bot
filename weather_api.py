@@ -54,6 +54,11 @@ class WeatherAPI:
                 if limit == 1 and cached_results:
                     return cached_results[:1]
             
+            # Try fallback city search first (faster and more reliable)
+            fallback_result = await self._search_cities_fallback(city_name)
+            if fallback_result:
+                return [fallback_result]
+            
             # Улучшенный rate limiting для Nominatim
             current_time = asyncio.get_event_loop().time()
             time_since_last = current_time - self._last_nominatim_request
@@ -75,7 +80,7 @@ class WeatherAPI:
             }
             
             # Добавляем retry логику с экспоненциальной задержкой
-            max_retries = 3
+            max_retries = 2  # Уменьшаем количество попыток
             for attempt in range(max_retries):
                 try:
                     response = await self.client.get(
@@ -87,17 +92,18 @@ class WeatherAPI:
                     break
                 except (httpx.TimeoutException, httpx.ConnectError, httpx.HTTPStatusError) as e:
                     if attempt == max_retries - 1:
-                        logger.error(f"All retry attempts failed for city search: {e}")
-                        raise
+                        logger.error(f"Nominatim API unavailable, using fallback: {e}")
+                        # Используем встроенную базу городов
+                        return await self._search_cities_builtin(city_name, limit)
                     
-                    wait_time = (2 ** attempt) + 1  # 2, 3, 5 секунд
+                    wait_time = 2  # Уменьшаем время ожидания
                     logger.warning(f"Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}")
                     await asyncio.sleep(wait_time)
             
             data = response.json()
             if not data:
-                logger.warning(f"No results found for city: {city_name}")
-                return []
+                logger.warning(f"No results found for city: {city_name}, trying fallback")
+                return await self._search_cities_builtin(city_name, limit)
             
             cities = []
             for result in data:
@@ -150,7 +156,8 @@ class WeatherAPI:
             
         except Exception as e:
             logger.error(f"Error searching cities: {e}")
-            return []
+            # Fallback to built-in city database
+            return await self._search_cities_builtin(city_name, limit)
     
     def _get_weather_emoji(self, weather_code: int) -> str:
         """Get weather emoji based on weather code"""
@@ -719,6 +726,147 @@ class WeatherAPI:
         except Exception as e:
             logger.error(f"Fallback weather API error: {e}")
             return None
+    
+    async def _search_cities_fallback(self, city_name: str) -> Optional[Dict]:
+        """Fallback city search using WeatherAPI.com"""
+        if not settings.weather_api_key:
+            return None
+            
+        try:
+            params = {
+                "key": settings.weather_api_key,
+                "q": city_name,
+                "aqi": "no"
+            }
+            
+            response = await self.client.get(f"{WEATHER_API_URL}/current.json", params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            location = data.get("location", {})
+            
+            if location:
+                return {
+                    "lat": location.get("lat", 0),
+                    "lon": location.get("lon", 0),
+                    "display_name": f"{location.get('name', city_name)}, {location.get('country', '')}",
+                    "readable_name": f"{location.get('name', city_name)}, {location.get('country', '')}",
+                    "country": location.get("country", ""),
+                    "state": location.get("region", ""),
+                    "country_emoji": self._get_country_emoji(location.get("country", ""))
+                }
+        except Exception as e:
+            logger.debug(f"WeatherAPI fallback failed: {e}")
+            return None
+    
+    async def _search_cities_builtin(self, city_name: str, limit: int = 5) -> list:
+        """Built-in city database as last resort"""
+        # Популярные города с координатами
+        builtin_cities = {
+            # Украина
+            "киев": {"lat": 50.4501, "lon": 30.5234, "country": "Ukraine", "name": "Киев"},
+            "kiev": {"lat": 50.4501, "lon": 30.5234, "country": "Ukraine", "name": "Kiev"},
+            "kyiv": {"lat": 50.4501, "lon": 30.5234, "country": "Ukraine", "name": "Kyiv"},
+            "полтава": {"lat": 49.5937, "lon": 34.5407, "country": "Ukraine", "name": "Полтава"},
+            "poltava": {"lat": 49.5937, "lon": 34.5407, "country": "Ukraine", "name": "Poltava"},
+            "харьков": {"lat": 49.9935, "lon": 36.2304, "country": "Ukraine", "name": "Харьков"},
+            "kharkiv": {"lat": 49.9935, "lon": 36.2304, "country": "Ukraine", "name": "Kharkiv"},
+            "одесса": {"lat": 46.4825, "lon": 30.7233, "country": "Ukraine", "name": "Одесса"},
+            "odesa": {"lat": 46.4825, "lon": 30.7233, "country": "Ukraine", "name": "Odesa"},
+            "львов": {"lat": 49.8397, "lon": 24.0297, "country": "Ukraine", "name": "Львов"},
+            "lviv": {"lat": 49.8397, "lon": 24.0297, "country": "Ukraine", "name": "Lviv"},
+            "днепр": {"lat": 48.4647, "lon": 35.0462, "country": "Ukraine", "name": "Днепр"},
+            "dnipro": {"lat": 48.4647, "lon": 35.0462, "country": "Ukraine", "name": "Dnipro"},
+            
+            # Россия
+            "москва": {"lat": 55.7558, "lon": 37.6176, "country": "Russia", "name": "Москва"},
+            "moscow": {"lat": 55.7558, "lon": 37.6176, "country": "Russia", "name": "Moscow"},
+            "санкт-петербург": {"lat": 59.9311, "lon": 30.3609, "country": "Russia", "name": "Санкт-Петербург"},
+            "saint petersburg": {"lat": 59.9311, "lon": 30.3609, "country": "Russia", "name": "Saint Petersburg"},
+            "новосибирск": {"lat": 55.0084, "lon": 82.9357, "country": "Russia", "name": "Новосибирск"},
+            "novosibirsk": {"lat": 55.0084, "lon": 82.9357, "country": "Russia", "name": "Novosibirsk"},
+            
+            # Популярные мировые города
+            "london": {"lat": 51.5074, "lon": -0.1278, "country": "United Kingdom", "name": "London"},
+            "лондон": {"lat": 51.5074, "lon": -0.1278, "country": "United Kingdom", "name": "Лондон"},
+            "paris": {"lat": 48.8566, "lon": 2.3522, "country": "France", "name": "Paris"},
+            "париж": {"lat": 48.8566, "lon": 2.3522, "country": "France", "name": "Париж"},
+            "berlin": {"lat": 52.5200, "lon": 13.4050, "country": "Germany", "name": "Berlin"},
+            "берлин": {"lat": 52.5200, "lon": 13.4050, "country": "Germany", "name": "Берлин"},
+            "new york": {"lat": 40.7128, "lon": -74.0060, "country": "United States", "name": "New York"},
+            "нью-йорк": {"lat": 40.7128, "lon": -74.0060, "country": "United States", "name": "Нью-Йорк"},
+            "tokyo": {"lat": 35.6762, "lon": 139.6503, "country": "Japan", "name": "Tokyo"},
+            "токио": {"lat": 35.6762, "lon": 139.6503, "country": "Japan", "name": "Токио"},
+            "beijing": {"lat": 39.9042, "lon": 116.4074, "country": "China", "name": "Beijing"},
+            "пекин": {"lat": 39.9042, "lon": 116.4074, "country": "China", "name": "Пекин"},
+            "sydney": {"lat": -33.8688, "lon": 151.2093, "country": "Australia", "name": "Sydney"},
+            "сидней": {"lat": -33.8688, "lon": 151.2093, "country": "Australia", "name": "Сидней"},
+            "dubai": {"lat": 25.2048, "lon": 55.2708, "country": "United Arab Emirates", "name": "Dubai"},
+            "дубай": {"lat": 25.2048, "lon": 55.2708, "country": "United Arab Emirates", "name": "Дубай"},
+            "istanbul": {"lat": 41.0082, "lon": 28.9784, "country": "Turkey", "name": "Istanbul"},
+            "стамбул": {"lat": 41.0082, "lon": 28.9784, "country": "Turkey", "name": "Стамбул"},
+            "rome": {"lat": 41.9028, "lon": 12.4964, "country": "Italy", "name": "Rome"},
+            "рим": {"lat": 41.9028, "lon": 12.4964, "country": "Italy", "name": "Рим"},
+            "madrid": {"lat": 40.4168, "lon": -3.7038, "country": "Spain", "name": "Madrid"},
+            "мадрид": {"lat": 40.4168, "lon": -3.7038, "country": "Spain", "name": "Мадрид"},
+            "amsterdam": {"lat": 52.3676, "lon": 4.9041, "country": "Netherlands", "name": "Amsterdam"},
+            "амстердам": {"lat": 52.3676, "lon": 4.9041, "country": "Netherlands", "name": "Амстердам"},
+            "vienna": {"lat": 48.2082, "lon": 16.3738, "country": "Austria", "name": "Vienna"},
+            "вена": {"lat": 48.2082, "lon": 16.3738, "country": "Austria", "name": "Вена"},
+            "prague": {"lat": 50.0755, "lon": 14.4378, "country": "Czech Republic", "name": "Prague"},
+            "прага": {"lat": 50.0755, "lon": 14.4378, "country": "Czech Republic", "name": "Прага"},
+            "warsaw": {"lat": 52.2297, "lon": 21.0122, "country": "Poland", "name": "Warsaw"},
+            "варшава": {"lat": 52.2297, "lon": 21.0122, "country": "Poland", "name": "Варшава"},
+        }
+        
+        city_lower = city_name.lower().strip()
+        results = []
+        
+        # Точное совпадение
+        if city_lower in builtin_cities:
+            city_data = builtin_cities[city_lower]
+            results.append({
+                "lat": city_data["lat"],
+                "lon": city_data["lon"],
+                "display_name": f"{city_data['name']}, {city_data['country']}",
+                "readable_name": f"{city_data['name']}, {city_data['country']}",
+                "country": city_data["country"],
+                "state": "",
+                "country_emoji": self._get_country_emoji(city_data["country"])
+            })
+        
+        # Частичное совпадение
+        if not results:
+            for key, city_data in builtin_cities.items():
+                if city_lower in key or key in city_lower:
+                    results.append({
+                        "lat": city_data["lat"],
+                        "lon": city_data["lon"],
+                        "display_name": f"{city_data['name']}, {city_data['country']}",
+                        "readable_name": f"{city_data['name']}, {city_data['country']}",
+                        "country": city_data["country"],
+                        "state": "",
+                        "country_emoji": self._get_country_emoji(city_data["country"])
+                    })
+                    if len(results) >= limit:
+                        break
+        
+        if results:
+            logger.info(f"Found {len(results)} cities in built-in database for '{city_name}'")
+            # Кэшируем результат
+            try:
+                city_data = results[0]
+                await DatabaseManager.cache_city(
+                    city_name, 
+                    city_data["lat"], 
+                    city_data["lon"], 
+                    city_data["country"], 
+                    city_data["display_name"]
+                )
+            except Exception as e:
+                logger.debug(f"Cache error: {e}")
+        
+        return results
     
     def get_clothing_recommendation(self, weather_data: Dict, language: str) -> str:
         """Get clothing recommendation based on weather"""
