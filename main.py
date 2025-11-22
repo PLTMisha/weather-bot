@@ -141,6 +141,11 @@ async def webhook(request: Request):
             logger.info("Update processed successfully")
         except Exception as process_error:
             logger.error(f"Error processing update: {process_error}", exc_info=True)
+            # Try to report the error but don't fail the webhook
+            try:
+                await app_monitor.log_error(process_error, "update_processing")
+            except:
+                pass
             # Don't raise here, just log and continue
         
         # Record response time

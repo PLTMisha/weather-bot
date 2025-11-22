@@ -22,6 +22,25 @@ class WeatherAPI:
     async def close(self):
         await self.client.aclose()
     
+    def _clean_cache(self):
+        """Clean old cache entries to prevent memory leaks"""
+        if not self.cache:
+            return
+        
+        current_time = datetime.now()
+        keys_to_remove = []
+        
+        for key, (cached_time, _) in self.cache.items():
+            # Remove entries older than 2 hours
+            if current_time - cached_time > timedelta(hours=2):
+                keys_to_remove.append(key)
+        
+        for key in keys_to_remove:
+            del self.cache[key]
+        
+        if keys_to_remove:
+            logger.debug(f"Cleaned {len(keys_to_remove)} old cache entries")
+    
     async def get_city_coordinates(self, city_name: str) -> Optional[Tuple[float, float, str]]:
         """Get city coordinates using LocationIQ API with caching (single result)"""
         results = await self.search_cities(city_name, limit=1)
@@ -446,7 +465,11 @@ class WeatherAPI:
             if cache_key in self.cache:
                 cached_time, cached_data = self.cache[cache_key]
                 if datetime.now() - cached_time < timedelta(minutes=30):
+                    logger.debug(f"Using cached weather data for {cache_key}")
                     return cached_data
+            
+            # Clean old cache entries to prevent memory leaks
+            self._clean_cache()
             
             params = {
                 "latitude": latitude,
@@ -458,21 +481,24 @@ class WeatherAPI:
                 "forecast_days": min(days, 7)  # Max 7 days
             }
             
+            logger.debug(f"Fetching weather data for {latitude}, {longitude}")
             response = await self.client.get(OPEN_METEO_URL, params=params)
             response.raise_for_status()
             
             data = response.json()
+            logger.debug("Weather data received successfully")
             
             # Process and format the data
             weather_data = self._process_weather_data(data, language, days)
             
             # Cache the result
             self.cache[cache_key] = (datetime.now(), weather_data)
+            logger.debug(f"Weather data cached with key {cache_key}")
             
             return weather_data
             
         except Exception as e:
-            logger.error(f"Error getting weather forecast: {e}")
+            logger.error(f"Error getting weather forecast: {e}", exc_info=True)
             # Try fallback API if available
             return await self._get_weather_fallback(latitude, longitude, language)
     
