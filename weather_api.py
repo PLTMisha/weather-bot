@@ -3,7 +3,7 @@ import asyncio
 from typing import Dict, Optional, Tuple
 from datetime import datetime, timedelta
 import logging
-from config import OPEN_METEO_URL, NOMINATIM_URL, WEATHER_API_URL, settings
+from config import OPEN_METEO_URL, LOCATIONIQ_URL, WEATHER_API_URL, settings
 from database import DatabaseManager
 
 logger = logging.getLogger(__name__)
@@ -17,13 +17,13 @@ class WeatherAPI:
             limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
         )
         self.cache = {}
-        self._last_nominatim_request = 0
+        self._last_locationiq_request = 0
         
     async def close(self):
         await self.client.aclose()
     
     async def get_city_coordinates(self, city_name: str) -> Optional[Tuple[float, float, str]]:
-        """Get city coordinates using Nominatim OSM API with caching (single result)"""
+        """Get city coordinates using LocationIQ API with caching (single result)"""
         results = await self.search_cities(city_name, limit=1)
         if results:
             city = results[0]
@@ -59,32 +59,38 @@ class WeatherAPI:
             if fallback_result:
                 return [fallback_result]
             
-            # Улучшенный rate limiting для Nominatim
+            # Rate limiting для LocationIQ
             current_time = asyncio.get_event_loop().time()
-            time_since_last = current_time - self._last_nominatim_request
+            time_since_last = current_time - self._last_locationiq_request
             if time_since_last < 1.0:
                 await asyncio.sleep(1.0 - time_since_last)
             
-            self._last_nominatim_request = asyncio.get_event_loop().time()
+            self._last_locationiq_request = asyncio.get_event_loop().time()
+            
+            # LocationIQ требует API ключ
+            if not settings.locationiq_api_key:
+                logger.warning("LocationIQ API key not set, using fallback")
+                return await self._search_cities_builtin(city_name, limit)
             
             params = {
+                "key": settings.locationiq_api_key,
                 "q": city_name,
                 "format": "json",
                 "limit": limit,
                 "addressdetails": 1,
-                "accept-language": "en,ru,uk"  # Добавляем поддержку языков
+                "accept-language": "en,ru,uk"
             }
             
             headers = {
-                "User-Agent": "WeatherBot/1.0 (https://github.com/your-repo)"
+                "User-Agent": "WeatherBot/1.0 (https://github.com/PLTMisha/weather-bot)"
             }
             
-            # Добавляем retry логику с экспоненциальной задержкой
-            max_retries = 2  # Уменьшаем количество попыток
+            # Добавляем retry логику
+            max_retries = 2
             for attempt in range(max_retries):
                 try:
                     response = await self.client.get(
-                        NOMINATIM_URL, 
+                        LOCATIONIQ_URL, 
                         params=params, 
                         headers=headers
                     )
@@ -92,11 +98,11 @@ class WeatherAPI:
                     break
                 except (httpx.TimeoutException, httpx.ConnectError, httpx.HTTPStatusError) as e:
                     if attempt == max_retries - 1:
-                        logger.error(f"Nominatim API unavailable, using fallback: {e}")
+                        logger.error(f"LocationIQ API unavailable, using fallback: {e}")
                         # Используем встроенную базу городов
                         return await self._search_cities_builtin(city_name, limit)
                     
-                    wait_time = 2  # Уменьшаем время ожидания
+                    wait_time = 2
                     logger.warning(f"Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}")
                     await asyncio.sleep(wait_time)
             

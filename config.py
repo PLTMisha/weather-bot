@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Weather API
     weather_api_key: Optional[str] = None
     
+    # LocationIQ API
+    locationiq_api_key: Optional[str] = None
+    
     # App settings
     port: int = 8000
     host: str = "0.0.0.0"
@@ -36,7 +39,7 @@ settings = Settings()
 
 # API URLs
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
-NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+LOCATIONIQ_URL = "https://eu1.locationiq.com/v1/search"
 WEATHER_API_URL = "https://api.weatherapi.com/v1"
 
 # Cache settings
