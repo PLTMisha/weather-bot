@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: weather-bot
+    env: python
+    pythonVersion: "3.11"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: weather-bot-db
+          property: connectionString
+      - key: WEBHOOK_URL
+        value: https://weather-bot.onrender.com/webhook
+      - key: BETTER_STACK_TOKEN
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+
+databases:
+  - name: weather-bot-db
+    plan: free
